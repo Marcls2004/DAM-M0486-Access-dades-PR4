@@ -30,6 +30,17 @@ public class ExempleServidor {
                             // Llegir tot el cos de la petició
                             String requestBody = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
                             System.out.println("Rebut JSON: " + requestBody);
+                            try {
+                                Files logFile = new File("peticions_log.txt");
+                                // Crear el fitxer si no existeix
+                                if (!logFile.exists()) {
+                                    logFile.createDirectories();
+                                }
+
+                            }catch (Exception eLog) {
+                                // En cas d'error, enviar un missatge d'error al client
+                                System.err.println("No s'ha pogut registrar la petició al disc: " + eLog.getMessage());
+                            }
 
                             // Convertir el JSON rebut en un objecte JsonObject
                             try (JsonReader jsonReader = Json.createReader(new StringReader(requestBody))) {

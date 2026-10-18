@@ -7,6 +7,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.File;
 import java.util.List;
+import java.util.Iterator;
 
 /**
  * Classe principal que gestiona la lectura i el processament de fitxers JSON per obtenir dades de llibres
@@ -15,6 +16,7 @@ import java.util.List;
 public class PR14GestioLlibreriaJacksonMain {
 
     private final File dataFile;
+    private final JsonMapper jsonMapper;
 
     /**
      * Constructor de la classe PR14GestioLlibreriaJacksonMain.
@@ -23,6 +25,7 @@ public class PR14GestioLlibreriaJacksonMain {
      */
     public PR14GestioLlibreriaJacksonMain(File dataFile) {
         this.dataFile = dataFile;
+        this.jsonMapper = JsonMapper.builder().build();
     }
 
     public static void main(String[] args) {
@@ -53,7 +56,15 @@ public class PR14GestioLlibreriaJacksonMain {
      */
     public List<Llibre> carregarLlibres() {
         // *************** CODI PRÀCTICA **********************/
-        return null; // Substitueix pel teu
+        try {
+            // Mapeja de manera automàtica el fitxer JSON a una llista d'objectes Llibre en memòria
+            return jsonMapper.readValue(dataFile, new TypeReference<List<Llibre>>() {});
+        } catch (JacksonException e) {
+            // Captura errors de format o fitxer inexistent i els mostra sense penjar l'aplicació
+            System.err.println("Error al llegir el fitxer JSON: " + e.getMessage());
+        }
+        // Retorna null si la lectura ha fallat per qualsevol motiu
+        return null;
     }
 
     /**
@@ -65,6 +76,16 @@ public class PR14GestioLlibreriaJacksonMain {
      */
     public void modificarAnyPublicacio(List<Llibre> llibres, int id, int nouAny) {
         // *************** CODI PRÀCTICA **********************/
+        // Recorre tota la col·lecció de llibres un per un
+        for (Llibre llibre : llibres) {
+            // Comprova si coincideix amb l'ID del llibre que busquem
+            if (llibre.getId() == id) {
+                // Actualitza l'any mitjançant el mètode setAny de l'objecte
+                llibre.setAny(nouAny);
+                // Atura la cerca immediatament per optimitzar el rendiment
+                break;
+            }
+        }
     }
 
     /**
@@ -75,6 +96,8 @@ public class PR14GestioLlibreriaJacksonMain {
      */
     public void afegirNouLlibre(List<Llibre> llibres, Llibre nouLlibre) {
         // *************** CODI PRÀCTICA **********************/
+        // Afegeix el nou objecte llibre rebut al final de la llista existent
+        llibres.add(nouLlibre);
     }
 
     /**
@@ -85,6 +108,18 @@ public class PR14GestioLlibreriaJacksonMain {
      */
     public void esborrarLlibre(List<Llibre> llibres, int id) {
         // *************** CODI PRÀCTICA **********************/
+        // Crea un iterador per recórrer i eliminar de la llista sense errors de modificació concurrent
+        Iterator<Llibre> iterator = llibres.iterator();
+        while (iterator.hasNext()) {
+            Llibre llibre = iterator.next();
+            // Si l'ID coincideix amb el llibre a eliminar
+            if (llibre.getId() == id) {
+                // Elimina l'element de la llista de manera completament segura
+                iterator.remove();
+                // Surt del bucle ja que l'element ha estat eliminat
+                break;
+            }
+        }
     }
 
     /**
@@ -95,5 +130,14 @@ public class PR14GestioLlibreriaJacksonMain {
      */
     public void guardarLlibres(List<Llibre> llibres) {
         // *************** CODI PRÀCTICA **********************/
+        // Defineix el fitxer de sortida a la mateixa carpeta pare que el fitxer d'entrada
+        File outputFile = new File(dataFile.getParent(), "llibres_output_jackson.json");
+        try {
+            // Guarda la llista convertint-la a JSON i li aplica un format visual net (Pretty Print)
+            jsonMapper.writerWithDefaultPrettyPrinter().writeValue(outputFile, llibres);
+        } catch (JacksonException e) {
+            // Imprimeix un error si hi ha problemes d'escriptura o permisos al disc dur
+            System.err.println("Error al escriure el fitxer JSON: " + e.getMessage() + "with" + outputFile.getName());
+        }
     }
 }
