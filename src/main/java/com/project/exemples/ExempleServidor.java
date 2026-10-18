@@ -12,6 +12,12 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+
 public class ExempleServidor {
 
     public static void main(String[] args) {
@@ -30,15 +36,40 @@ public class ExempleServidor {
                             // Llegir tot el cos de la petició
                             String requestBody = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
                             System.out.println("Rebut JSON: " + requestBody);
+                            // Obtener el método HTTP
+                            String metode = exchange.getRequestMethod().toString();
+
+                            // Generar marcas de tiempo para el archivo y para el JSON
+                            LocalDateTime now = LocalDateTime.now();
+                            String timestampArchivo = now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+                            String timestampJSON = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
                             try {
-                                Files logFile = new File("peticions_log.txt");
-                                // Crear el fitxer si no existeix
-                                if (!logFile.exists()) {
-                                    logFile.createDirectories();
+                                // 1. Asegurar que la carpeta exista
+                                File directori = new File("data/requests");
+                                if (!directori.exists()) {
+                                    directori.mkdirs();
                                 }
 
-                            }catch (Exception eLog) {
-                                // En cas d'error, enviar un missatge d'error al client
+                                // 2. Construir el objeto JSON requerido
+                                JsonObject jsonPeticio = Json.createObjectBuilder()
+                                        .add("data_hora", timestampJSON)
+                                        .add("metode", metode)
+                                        .add("cos", requestBody)
+                                        .build();
+
+                                // 3. Configurar el formato "pretty printing" (organizado y legible)
+                                java.util.Map<String, Object> config = new java.util.HashMap<>();
+                                config.put(jakarta.json.stream.JsonGenerator.PRETTY_PRINTING, true);
+
+                                // 4. Escribir el archivo en disco
+                                File fitxerSortida = new File(directori, "request_" + timestampArchivo + ".json");
+                                try (JsonWriter writer = Json.createWriterFactory(config).createWriter(new FileWriter(fitxerSortida))) {
+                                    writer.write(jsonPeticio);
+                                }
+                                
+                            } catch (Exception eLog) {
+                                // Si el guardado falla en disco, el servidor sigue respondiendo al cliente
                                 System.err.println("No s'ha pogut registrar la petició al disc: " + eLog.getMessage());
                             }
 
